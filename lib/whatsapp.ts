@@ -19,20 +19,6 @@ type NightStats = {
   flirts: number
 }
 
-export function generateWelcomeMessage(barName: string, barId: string, accessCode: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_URL ?? 'https://revela.app'
-  return (
-    `👻 *Bem-vindo ao REVELA, ${barName}!*\n\n` +
-    `Seu modo fantasma está ativo. Aqui estão seus links:\n\n` +
-    `📺 Telão: ${baseUrl}/telao/${barId}\n` +
-    `👤 Painel: ${baseUrl}/painel/${barId}\n` +
-    `💳 Caixa: ${baseUrl}/caixa/${barId}\n\n` +
-    `🔑 Código de acesso do Painel e do Caixa: *${accessCode}*\n\n` +
-    `Guarde esse código — ele é a senha do seu bar. Sem ele, ninguém mais acessa suas fotos e cupons.\n\n` +
-    `_REVELA - Câmera Descartável Digital_`
-  )
-}
-
 export function generateNightReport(barName: string, stats: NightStats): string {
   const { photos, coupons, flirts } = stats
   return (

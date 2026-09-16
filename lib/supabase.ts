@@ -17,7 +17,6 @@ export type Bar = {
   instagram: string | null
   owner_whatsapp: string | null
   stripe_customer_id: string | null
-  access_code: string
   created_at: string
 }
 

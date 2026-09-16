@@ -20,17 +20,6 @@ Câmera descartável digital coletiva para bares, baladas e eventos. PWA 100% vi
 6. O caixa valida cupons em `/caixa/[barId]`.
 7. Todo dia às 02h (horário de Brasília), o cron `/api/cron/revelacao` envia um relatório da noite por WhatsApp para o dono.
 8. O painel do dono (`/painel/[barId]`) é somente leitura — "Modo Fantasma Ativo, você não precisa fazer nada".
-9. Ao pagar em `/criar-bar`, o dono recebe automaticamente por WhatsApp os links do telão/painel/caixa e o **código de acesso** do bar (gerado sozinho, sem contato humano).
-
-## Moderação por IA
-
-`lib/ia.ts` usa a **OpenAI Moderation API** (`omni-moderation-latest`) para moderar fotos (`/api/upload`) e mensagens do Correio Elegante (`/api/flirt`) automaticamente — nunca há revisão manual. Se `OPENAI_API_KEY` não estiver configurada, o app cai em um fallback simples (aprova fotos e bloqueia só uma lista básica de palavrões em texto) para não travar o ambiente de desenvolvimento. Em produção, defina `OPENAI_API_KEY` para moderação real.
-
-Se a chamada à API de moderação falhar (rede, rate limit etc.), a foto é aprovada por padrão (fail-open) — prioriza nunca travar a festa em vez de bloquear tudo por um erro temporário de rede.
-
-## Acesso ao Painel e ao Caixa
-
-`/painel/[barId]` e `/caixa/[barId]` são protegidos por um **código de acesso de 6 caracteres**, gerado automaticamente na tabela `bars` (coluna `access_code`) quando o bar é criado. O dono recebe esse código por WhatsApp. Ao digitar o código correto, um cookie de sessão (`httpOnly`) é gravado por 12h — sem necessidade de cadastro de usuário/senha.
 
 ## Configuração local
 
@@ -55,14 +44,11 @@ npm run dev
 | `STRIPE_PRICE_ID` | (opcional) ID de um Price recorrente de R$149/mês. Se omitido, o preço é criado dinamicamente no checkout |
 | `ZAPI_URL` | URL do endpoint Z-API para envio de WhatsApp. Se vazio, mensagens são apenas logadas no console (mock) |
 | `CRON_SECRET` | Segredo usado para autenticar o cron job |
-| `OPENAI_API_KEY` | Chave da OpenAI usada para moderação real de fotos e mensagens (recomendado em produção) |
-| `AUTH_SECRET` | (opcional) segredo para assinar o cookie de sessão de `/painel` e `/caixa` |
+| `OPENAI_API_KEY` | (opcional) para moderação/IA mais avançada no futuro |
 
 ## Banco de dados
 
-Execute `supabase/schema.sql` no SQL Editor do seu projeto Supabase. Isso cria as tabelas `bars`, `photos`, `flirts`, `matches`, `messages`, `coupons`, habilita Realtime em `photos`, `flirts` e `coupons`, e ativa **Row Level Security**: a chave anon (usada no navegador) só consegue ler `photos` e `coupons`; todo o resto (incluindo `access_code` do bar) só é acessível pelas rotas de servidor com a service role key.
-
-Se você já tinha o schema anterior (sem `access_code`/RLS), rode as instruções de migração comentadas no final de `supabase/schema.sql`.
+Execute `supabase/schema.sql` no SQL Editor do seu projeto Supabase. Isso cria as tabelas `bars`, `photos`, `flirts`, `matches`, `messages`, `coupons` e habilita Realtime em `photos`, `flirts` e `coupons`.
 
 Depois, crie manualmente um bucket público chamado **photos** em Storage → New bucket (marque "Public bucket").
 
@@ -85,9 +71,8 @@ Depois, crie manualmente um bucket público chamado **photos** em Storage → Ne
 - `/criar-bar` — onboarding do dono (nome, WhatsApp, e-mail → Stripe Checkout)
 - `/b/[barId]?mesa=N` — app do cliente (câmera, telão, flert, perfil)
 - `/telao/[barId]` — telão ao vivo em tela grande
-- `/painel/[barId]` — painel fantasma do dono (somente leitura, protegido por código de acesso)
-- `/painel/[barId]/mesas` — grade de QR codes por mesa, pronta para imprimir/salvar em PDF (protegido por código de acesso)
-- `/caixa/[barId]` — validador de cupom no caixa (protegido por código de acesso)
+- `/painel/[barId]` — painel fantasma do dono (somente leitura)
+- `/caixa/[barId]` — validador de cupom no caixa
 
 ## Ícones PWA
 

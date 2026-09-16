@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'missing_fields' }, { status: 400 })
     }
 
-    const { approved } = await moderateImage(image)
+    const { approved } = moderateImage(image)
 
     if (!approved) {
       return NextResponse.json({ ok: true, moderated: true })
