@@ -1,60 +1,56 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { supabase, type Photo } from '@/lib/supabase'
+import Link from 'next/link'
+import { supabaseAdmin, type Photo } from '@/lib/supabase'
+import { isAuthorized } from '@/lib/auth'
+import LoginGate from '@/components/LoginGate'
 
 function photoUrl(path: string): string {
-  const { data } = supabase.storage.from('photos').getPublicUrl(path)
+  const { data } = supabaseAdmin.storage.from('photos').getPublicUrl(path)
   return data.publicUrl
 }
 
-export default function PainelPage() {
-  const params = useParams<{ barId: string }>()
-  const [totalPhotos, setTotalPhotos] = useState(0)
-  const [totalCoupons, setTotalCoupons] = useState(0)
-  const [totalFlirts, setTotalFlirts] = useState(0)
-  const [topPhotos, setTopPhotos] = useState<Photo[]>([])
-  const [loading, setLoading] = useState(true)
+async function loadStats(barId: string) {
+  const startOfDay = new Date()
+  startOfDay.setHours(0, 0, 0, 0)
 
-  useEffect(() => {
-    async function load() {
-      const startOfDay = new Date()
-      startOfDay.setHours(0, 0, 0, 0)
+  const [photosRes, couponsRes, flirtsRes, topRes] = await Promise.all([
+    supabaseAdmin
+      .from('photos')
+      .select('id', { count: 'exact', head: true })
+      .eq('bar_id', barId)
+      .gte('created_at', startOfDay.toISOString()),
+    supabaseAdmin
+      .from('coupons')
+      .select('id', { count: 'exact', head: true })
+      .eq('bar_id', barId)
+      .gte('created_at', startOfDay.toISOString()),
+    supabaseAdmin
+      .from('flirts')
+      .select('id', { count: 'exact', head: true })
+      .eq('bar_id', barId)
+      .gte('created_at', startOfDay.toISOString()),
+    supabaseAdmin
+      .from('photos')
+      .select('*')
+      .eq('bar_id', barId)
+      .order('aesthetic_score', { ascending: false })
+      .limit(10),
+  ])
 
-      const [photosRes, couponsRes, flirtsRes, topRes] = await Promise.all([
-        supabase
-          .from('photos')
-          .select('id', { count: 'exact', head: true })
-          .eq('bar_id', params.barId)
-          .gte('created_at', startOfDay.toISOString()),
-        supabase
-          .from('coupons')
-          .select('id', { count: 'exact', head: true })
-          .eq('bar_id', params.barId)
-          .gte('created_at', startOfDay.toISOString()),
-        supabase
-          .from('flirts')
-          .select('id', { count: 'exact', head: true })
-          .eq('bar_id', params.barId)
-          .gte('created_at', startOfDay.toISOString()),
-        supabase
-          .from('photos')
-          .select('*')
-          .eq('bar_id', params.barId)
-          .order('aesthetic_score', { ascending: false })
-          .limit(10),
-      ])
+  return {
+    totalPhotos: photosRes.count ?? 0,
+    totalCoupons: couponsRes.count ?? 0,
+    totalFlirts: flirtsRes.count ?? 0,
+    topPhotos: (topRes.data ?? []) as Photo[],
+  }
+}
 
-      setTotalPhotos(photosRes.count ?? 0)
-      setTotalCoupons(couponsRes.count ?? 0)
-      setTotalFlirts(flirtsRes.count ?? 0)
-      setTopPhotos(topRes.data ?? [])
-      setLoading(false)
-    }
+export default async function PainelPage({ params }: { params: { barId: string } }) {
+  const authorized = await isAuthorized(params.barId)
+  if (!authorized) {
+    return <LoginGate barId={params.barId} title="Painel do Dono" />
+  }
 
-    load()
-  }, [params.barId])
+  const { totalPhotos, totalCoupons, totalFlirts, topPhotos } = await loadStats(params.barId)
 
   return (
     <main className="min-h-screen p-6">
@@ -90,10 +86,31 @@ export default function PainelPage() {
           </div>
         </div>
 
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            href={`/telao/${params.barId}`}
+            className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold uppercase text-white"
+          >
+            Abrir telão
+          </Link>
+          <Link
+            href={`/caixa/${params.barId}`}
+            className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold uppercase text-white"
+          >
+            Abrir caixa
+          </Link>
+          <Link
+            href={`/painel/${params.barId}/mesas`}
+            className="rounded-full bg-lime px-5 py-2 text-xs font-bold uppercase text-black"
+          >
+            Imprimir QR das mesas
+          </Link>
+        </div>
+
         <h2 className="mt-12 text-left text-lg font-black uppercase">
           Top 10 fotos da noite
         </h2>
-        {!loading && topPhotos.length === 0 && (
+        {topPhotos.length === 0 && (
           <p className="mt-4 text-left text-white/40">Nenhuma foto ainda.</p>
         )}
         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
