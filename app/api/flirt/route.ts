@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-
-const BLOCKED_WORDS = [
-  'porra',
-  'caralho',
-  'merda',
-  'puta',
-  'buceta',
-  'piroca',
-  'vagabunda',
-  'desgraça',
-  'foder',
-  'fdp',
-]
-
-function containsProfanity(text: string): boolean {
-  const normalized = text.toLowerCase()
-  return BLOCKED_WORDS.some((word) => normalized.includes(word))
-}
+import { moderateText } from '@/lib/ia'
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +15,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'missing_fields' }, { status: 400 })
     }
 
-    if (containsProfanity(message)) {
+    const { approved } = await moderateText(message)
+    if (!approved) {
       return NextResponse.json({ ok: false, error: 'content_blocked' }, { status: 400 })
     }
 
